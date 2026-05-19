@@ -9,20 +9,6 @@ from .models import BookingRequest, Review, Venue
 User = get_user_model()
 
 
-def set_form_styles(form):
-    for name, field in form.fields.items():
-        if isinstance(field.widget, forms.Select):
-            css_class = 'form-select'
-        else:
-            css_class = 'form-control'
-
-        field.widget.attrs.setdefault('class', css_class)
-
-        if not isinstance(field.widget, forms.Select):
-            field.widget.attrs.setdefault('autocomplete', 'off')
-
-        if field.help_text:
-            field.widget.attrs.setdefault('aria-describedby', f'{name}-hint')
 
 
 class RegistrationForm(forms.ModelForm):
