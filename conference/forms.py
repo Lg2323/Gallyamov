@@ -1,0 +1,194 @@
+from django import forms
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+
+from .models import BookingRequest, Review, Venue
+
+User = get_user_model()
+
+
+def set_form_styles(form):
+    for name, field in form.fields.items():
+        if isinstance(field.widget, forms.Select):
+            css_class = 'form-select'
+        else:
+            css_class = 'form-control'
+
+        field.widget.attrs.setdefault('class', css_class)
+
+        if not isinstance(field.widget, forms.Select):
+            field.widget.attrs.setdefault('autocomplete', 'off')
+
+        if field.help_text:
+            field.widget.attrs.setdefault('aria-describedby', f'{name}-hint')
+
+
+class RegistrationForm(forms.ModelForm):
+    password = forms.CharField(
+        label='Пароль',
+        strip=False,
+        widget=forms.PasswordInput(
+            attrs={
+                'placeholder': 'Минимум 8 символов',
+                'autocomplete': 'new-password',
+            }
+        ),
+        help_text='Минимум 8 символов.',
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'password', 'full_name', 'phone', 'email')
+        labels = {
+            'username': 'Логин',
+            'full_name': 'ФИО',
+            'phone': 'Телефон',
+            'email': 'Электронная почта',
+        }
+        help_texts = {
+            'username': 'Минимум 6 символов, только латиница и цифры.',
+            'full_name': 'Укажите фамилию, имя и отчество.',
+            'phone': 'Например: +79991234567',
+            'email': 'На этот адрес можно отправлять уведомления.',
+        }
+        widgets = {
+            'username': forms.TextInput(attrs={'placeholder': 'conference24'}),
+            'full_name': forms.TextInput(attrs={'placeholder': 'Иванов Иван Иванович'}),
+            'phone': forms.TextInput(attrs={'placeholder': '+79991234567'}),
+            'email': forms.EmailInput(attrs={'placeholder': 'mail@example.com'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        set_form_styles(self)
+
+    def clean_username(self):
+        username = self.cleaned_data['username']
+
+        if len(username) < 6:
+            raise ValidationError('Логин должен содержать минимум 6 символов.')
+
+        if User.objects.filter(username__iexact=username).exists():
+            raise ValidationError('Этот логин уже занят.')
+
+        return username
+
+    def clean_password(self):
+        password = self.cleaned_data['password']
+        validate_password(password)
+        return password
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data['password'])
+
+        if commit:
+            user.save()
+
+        return user
+
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(
+        label='Логин',
+        widget=forms.TextInput(attrs={'placeholder': 'Ваш логин', 'autocomplete': 'username'}),
+    )
+    password = forms.CharField(
+        label='Пароль',
+        strip=False,
+        widget=forms.PasswordInput(attrs={'placeholder': 'Ваш пароль', 'autocomplete': 'current-password'}),
+    )
+
+    error_messages = {
+        'invalid_login': 'Неверный логин или пароль.',
+        'inactive': 'Этот аккаунт отключён.',
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        set_form_styles(self)
+
+
+class BookingRequestForm(forms.ModelForm):
+    class Meta:
+        model = BookingRequest
+        fields = (
+            'conference_title',
+            'venue',
+            'event_date',
+            'preferred_time',
+            'attendees',
+            'payment_method',
+            'special_requests',
+        )
+        labels = {
+            'conference_title': 'Название конференции',
+            'venue': 'Помещение',
+            'event_date': 'Дата',
+            'preferred_time': 'Предпочтительное время',
+            'attendees': 'Количество участников',
+            'payment_method': 'Способ оплаты',
+            'special_requests': 'Дополнительные пожелания',
+        }
+        help_texts = {
+            'venue': 'Выберите подходящее помещение из списка.',
+            'event_date': 'Используйте календарь для выбора даты.',
+            'payment_method': 'Определите удобный способ оплаты.',
+        }
+        widgets = {
+            'conference_title': forms.TextInput(attrs={'placeholder': 'Весенняя IT-конференция'}),
+            'event_date': forms.DateInput(attrs={'type': 'date'}),
+            'preferred_time': forms.TimeInput(attrs={'type': 'time'}),
+            'attendees': forms.NumberInput(attrs={'min': 1, 'max': 500}),
+            'special_requests': forms.Textarea(
+                attrs={'rows': 4, 'placeholder': 'Например: нужен проектор и приветственная зона.'}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['venue'].queryset = Venue.objects.all()
+        set_form_styles(self)
+
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ('rating', 'comment')
+        labels = {
+            'rating': 'Оценка',
+            'comment': 'Комментарий',
+        }
+        widgets = {
+            'rating': forms.Select(choices=[(i, f'{i} / 5') for i in range(5, 0, -1)]),
+            'comment': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Расскажите, как прошло мероприятие.'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        set_form_styles(self)
+
+
+class AdminBookingUpdateForm(forms.ModelForm):
+    class Meta:
+        model = BookingRequest
+        fields = ('status', 'admin_comment')
+        labels = {
+            'status': 'Статус заявки',
+            'admin_comment': 'Комментарий администратора',
+        }
+        widgets = {
+            'status': forms.Select(),
+            'admin_comment': forms.Textarea(
+                attrs={'rows': 4, 'placeholder': 'Например: зал подтверждён на 14:00, оборудование готово.'}
+            ),
+        }
+        help_texts = {
+            'status': 'Выберите нужный статус из выпадающего списка.',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        set_form_styles(self)
