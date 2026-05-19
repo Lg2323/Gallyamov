@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<section class="section-space">
+    <div class="container">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-7">
+                <div class="card glass-card border-0 shadow-sm hero-panel" data-reveal>
+                    <div class="card-body p-4 p-lg-5">
+                        <div class="eyebrow">Конференции и выбор помещения</div>
+                        <h1 class="hero-title">Подавайте заявки на бронирование залов.</h1>
+                        <p class="lead text-muted-soft mb-4">
+                            Система объединяет регистрацию пользователей, создание заявок, выбор времени,
+                            способы оплаты, историю бронирований и отзывы после изменения статуса администратором.
+                        </p>
+
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            {% if request.user.is_authenticated %}
+                                <a href="{% url 'create_request' %}" class="btn btn-brand">Создать заявку</a>
+                                <a href="{% url 'dashboard' %}" class="btn btn-outline-brand">Личный кабинет</a>
+                            {% else %}
+                                <a href="{% url 'register' %}" class="btn btn-brand">Зарегистрироваться</a>
+                                <a href="{% url 'login' %}" class="btn btn-outline-brand">Войти</a>
+                            {% endif %}
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-4">
+                                <div class="metric-card">
+                                    <div class="metric-number">{{ stats.venues }}</div>
+                                    <div class="metric-text">готовых помещений</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="metric-card">
+                                    <div class="metric-number">{{ stats.requests }}</div>
+                                    <div class="metric-text">заявок в системе</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="metric-card">
+                                    <div class="metric-number">{{ stats.completed }}</div>
+                                    <div class="metric-text">завершённых мероприятий</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card glass-card border-0 shadow-sm slider-shell" data-reveal data-slider>
+                    <div class="slider-card__track">
+                        <article class="slide"><img src="{% static 'images/kino.svg' %}" alt="Кинозал"></article>
+                        <article class="slide"><img src="{% static 'images/del_meet.svg' %}" alt="Зал для деловых встреч"></article>
+                        <article class="slide"><img src="{% static 'images/space_conf.svg' %}" alt="Пространство для конференций"></article>
+                        <article class="slide"><img src="{% static 'images/white_room.svg' %}" alt="Светлый зал для презентаций"></article>
+                    </div>
+                    <div class="slider-controls">
+                        <button type="button" class="slider-button" data-slider-prev aria-label="Предыдущий слайд"><img
+                                src="{% static 'images/Arrow_left.svg'%}" alt=""></button>
+                        <button type="button" class="slider-button" data-slider-next aria-label="Следующий слайд"><img
+                                src="{% static 'images/Arrow_right.svg'%}" alt=""></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-space pt-0">
+    <div class="container">
+        <div class="section-head" data-reveal>
+            <h2 class="section-title">Почему именно мы ?</h2>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 glass-card border-0 shadow-sm" data-reveal>
+                    <div class="card-body p-4">
+                        <h3 class="h5 mb-3">Соотношение цены и качества</h3>
+                         <img src="{% static 'images/sales.svg' %}" alt="Скидки" class="card-img-top">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 glass-card border-0 shadow-sm" data-reveal>
+                    <div class="card-body p-4">
+                        <h3 class="h5 mb-3">Работаем по договору</h3>
+                         <img src="{% static 'images/paper.svg' %}" alt="Скидки" class="card-img-top">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 glass-card border-0 shadow-sm" data-reveal>
+                    <div class="card-body p-4">
+                        <h3 class="h5 mb-3">Удобная оплата</h3>
+                         <img src="{% static 'images/cash.svg' %}" alt="Скидки" class="card-img-top ">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-space pt-0" id="venues">
+    <div class="container">
+        <div class="section-head" data-reveal>
+            <div class="eyebrow">Помещения</div>
+            <h2 class="section-title">Выберите подходящий зал для мероприятия.</h2>
+        </div>
+
+        <div class="row g-4">
+            {% for venue in venues %}
+                <div class="col-lg-6">
+                    <div class="card h-100 glass-card border-0 shadow-sm venue-card" data-reveal>
+                        <img src="{% static venue.image %}" alt="{{ venue.name }}" class="card-img-top venue-image">
+                        <div class="card-body p-4">
+                            <div class="d-flex flex-wrap gap-2 text-muted-soft small mb-2">
+                                <span>{{ venue.location }}</span>
+                                <span>до {{ venue.capacity }} гостей</span>
+                            </div>
+                            <h3 class="h5 mb-2">{{ venue.name }}</h3>
+                            <p class="text-muted-soft">{{ venue.short_description }}</p>
+                            <div class="chip-list mb-3">
+                                {% for amenity in venue.amenities_list %}
+                                    <span class="chip">{{ amenity }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <strong>{{ venue.hourly_rate }} ₽ / час</strong>
+                                <a href="{% url 'create_request' %}" class="btn btn-outline-brand btn-sm">Выбрать</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="card glass-card border-0 shadow-sm empty-card">
+                        <div class="card-body p-4 text-center">
+                            <h3 class="h5">Похоже ничего нет.</h3>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="section-space pt-0">
+    <div class="container">
+        <div class="section-head" data-reveal>
+            <div class="eyebrow">Отзывы</div>
+            <h2 class="section-title">Последние отзывы после завершения мероприятий.</h2>
+        </div>
+
+        <div class="row g-4">
+            {% for review in reviews %}
+                <div class="col-md-6 col-xl-3">
+                    <div class="card h-100 glass-card border-0 shadow-sm" data-reveal>
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <strong>{{ review.user.full_name }}</strong>
+                                <span class="badge badge-completed">{{ review.rating }}/5</span>
+                            </div>
+                            <h3 class="h6 mb-2">{{ review.booking_request.conference_title }}</h3>
+                            <p class="mb-0 text-muted-soft">{{ review.comment }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="card glass-card border-0 shadow-sm empty-card" data-reveal>
+                        <div class="card-body p-4 text-center">
+                            <h3 class="h5">Пока нет отзывов</h3>
+                            <p class="mb-0 text-muted-soft">Они появятся после того, как администратор изменит статус заявок и пользователи оставят комментарии.</p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="section-space pt-0">
+    <div class="container">
+        <div class="card cta-card border-0 shadow-sm" data-reveal>
+            <div class="card-body p-4 p-lg-5 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div>
+                    <div class="eyebrow text-white mb-2">Готово к работе</div>
+                    <h2 class="h2 mb-2">Нужна заявка на бронирование?</h2>
+                    <p class="mb-0 text-white-50">Выберите помещение, укажите дату, предпочтительное время и способ оплаты в отдельной форме.</p>
+                </div>
+                <a href="{% url 'create_request' %}" class="btn btn-light">Открыть форму заявки</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

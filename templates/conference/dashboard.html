@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Личный кабинет | Conference Space{% endblock %}
+
+{% block content %}
+<section class="section-space">
+    <div class="container">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-7">
+                <div class="card glass-card border-0 shadow-sm hero-panel" data-reveal>
+                    <div class="card-body p-4 p-lg-5">
+                        <div class="eyebrow">Личный кабинет</div>
+                        <h1 class="hero-title">{{ request.user.full_name }}</h1>
+                        <p class="lead text-muted-soft mb-4">Здесь отображается история заявок, текущие статусы, комментарии администратора и отзывы.</p>
+
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            <a href="{% url 'create_request' %}" class="btn btn-brand">Новая заявка</a>
+                            <form method="post" action="{% url 'logout' %}" class="inline-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-brand">Выйти</button>
+                            </form>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-4">
+                                <div class="metric-card">
+                                    <div class="metric-number">{{ booking_stats.total }}</div>
+                                    <div class="metric-text">всего заявок</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="metric-card">
+                                    <div class="metric-number">{{ booking_stats.scheduled }}</div>
+                                    <div class="metric-text">мероприятий назначено</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="metric-card">
+                                    <div class="metric-number">{{ booking_stats.completed }}</div>
+                                    <div class="metric-text">мероприятий завершено</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card glass-card border-0 shadow-sm slider-shell" data-reveal data-slider>
+                    <div class="slider-card__track">
+                        <article class="slide"><img src="{% static 'images/kino.svg' %}" alt="Слайд 1"></article>
+                        <article class="slide"><img src="{% static 'images/del_meet.svg' %}" alt="Слайд 2"></article>
+                        <article class="slide"><img src="{% static 'images/space_conf.svg' %}" alt="Слайд 3"></article>
+                        <article class="slide"><img src="{% static 'images/white_room.svg' %}" alt="Слайд 4"></article>
+                    </div>
+                    <div class="slider-controls">
+                        <button type="button" class="slider-button" data-slider-prev aria-label="Назад">←</button>
+                        <button type="button" class="slider-button" data-slider-next aria-label="Вперёд">→</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-space pt-0">
+    <div class="container">
+        <div class="section-head" data-reveal>
+            <div class="eyebrow">История заявок</div>
+            <h2 class="section-title">Ваши бронирования и отзывы</h2>
+        </div>
+
+        <div class="row g-4">
+            {% for booking_request in booking_requests %}
+                <div class="col-12">
+                    <div class="card glass-card border-0 shadow-sm" data-reveal>
+                        <div class="card-body p-4">
+                            <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3 mb-3">
+                                <div>
+                                    <h3 class="h5 mb-1">{{ booking_request.conference_title }}</h3>
+                                    <p class="mb-0 text-muted-soft">{{ booking_request.venue.name }} • {{ booking_request.venue.location }}</p>
+                                </div>
+                                <span class="{{ booking_request.status_badge_class }}">{{ booking_request.get_status_display }}</span>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6 col-lg-3"><div class="note-box h-100"><strong>Дата</strong><p class="mb-0 mt-2">{{ booking_request.event_date|date:'d.m.Y' }}</p></div></div>
+                                <div class="col-sm-6 col-lg-3"><div class="note-box h-100"><strong>Время</strong><p class="mb-0 mt-2">{{ booking_request.preferred_time|time:'H:i' }}</p></div></div>
+                                <div class="col-sm-6 col-lg-3"><div class="note-box h-100"><strong>Оплата</strong><p class="mb-0 mt-2">{{ booking_request.get_payment_method_display }}</p></div></div>
+                                <div class="col-sm-6 col-lg-3"><div class="note-box h-100"><strong>Участников</strong><p class="mb-0 mt-2">{{ booking_request.attendees }}</p></div></div>
+                            </div>
+
+                            {% if booking_request.special_requests %}
+                                <div class="note-box mb-3">
+                                    <strong>Комментарий</strong>
+                                    <p class="mb-0 mt-2">{{ booking_request.special_requests }}</p>
+                                </div>
+                            {% endif %}
+
+                            {% if booking_request.admin_comment %}
+                                <div class="note-box note-box--accent mb-3">
+                                    <strong>Комментарий администратора</strong>
+                                    <p class="mb-0 mt-2">{{ booking_request.admin_comment }}</p>
+                                </div>
+                            {% endif %}
+
+                            {% if booking_request.review %}
+                                <div class="note-box note-box--warm">
+                                    <strong>Ваш отзыв: {{ booking_request.review.rating }}/5</strong>
+                                    <p class="mb-0 mt-2">{{ booking_request.review.comment }}</p>
+                                </div>
+                            {% elif booking_request.can_leave_review %}
+                                <form method="post" action="{% url 'review_create' booking_request.pk %}">
+                                    {% csrf_token %}
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-3">
+                                            <label for="rating-{{ booking_request.pk }}" class="form-label">Оценка</label>
+                                            <select id="rating-{{ booking_request.pk }}" name="rating" class="form-select">
+                                                <option value="5">5 / 5</option>
+                                                <option value="4">4 / 5</option>
+                                                <option value="3">3 / 5</option>
+                                                <option value="2">2 / 5</option>
+                                                <option value="1">1 / 5</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-9">
+                                            <label for="comment-{{ booking_request.pk }}" class="form-label">Отзыв</label>
+                                            <textarea id="comment-{{ booking_request.pk }}" name="comment" rows="3" class="form-control" placeholder="Опишите впечатления от мероприятия."></textarea>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-brand btn-sm">Оставить отзыв</button>
+                                </form>
+                            {% else %}
+                                <div class="note-box">
+                                    <p class="mb-0">Отзыв станет доступен после того, как администратор изменит статус заявки.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="card glass-card border-0 shadow-sm empty-card" data-reveal>
+                        <div class="card-body p-4 text-center">
+                            <h3 class="h5">Заявок пока нет</h3>
+                            <p class="mb-3 text-muted-soft">Создайте первую заявку на бронирование помещения через отдельную форму.</p>
+                            <a href="{% url 'create_request' %}" class="btn btn-brand">Открыть форму заявки</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

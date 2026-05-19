@@ -1,16 +1,21 @@
-from django.shortcuts import render
-
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.shortcuts import  redirect, render
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import (
+    AdminBookingUpdateForm,
+    BookingRequestForm,
     LoginForm,
     RegistrationForm,
+    ReviewForm,
 )
 from .models import BookingRequest, Review, Venue
 
-
+# Проверка прав пользователя
 def check_admin_access(request):
     if not request.user.is_authenticated:
         return redirect('login')
@@ -78,4 +83,168 @@ def logout_view(request):
         logout(request)
     return redirect('home')
 
+
+@login_required
+def dashboard(request):
+    booking_requests = (
+        BookingRequest.objects.filter(user=request.user)
+        .select_related('venue')
+        .prefetch_related('review')
+    )
+
+    context = {
+        'booking_requests': booking_requests,
+        'booking_stats': {
+            'total': booking_requests.count(),
+            'new': booking_requests.filter(status=BookingRequest.Status.NEW).count(),
+            'scheduled': booking_requests.filter(status=BookingRequest.Status.SCHEDULED).count(),
+            'completed': booking_requests.filter(status=BookingRequest.Status.COMPLETED).count(),
+        },
+    }
+    return render(request, 'conference/dashboard.html', context)
+
+
+@login_required
+def create_request(request):
+    if request.method == 'POST':
+        form = BookingRequestForm(request.POST)
+        if form.is_valid():
+            booking_request = form.save(commit=False)
+            booking_request.user = request.user
+            booking_request.save()
+            messages.success(request, 'Заявка на бронирование создана.')
+            return redirect('dashboard')
+    else:
+        form = BookingRequestForm()
+
+    context = {
+        'form': form,
+        'venues': Venue.objects.all(),
+    }
+    return render(request, 'conference/create_request.html', context)
+
+
+@login_required
+def review_create(request, pk):
+    booking_request = get_object_or_404(
+        BookingRequest.objects.select_related('user'),
+        pk=pk,
+        user=request.user,
+    )
+
+    if request.method != 'POST':
+        return redirect('dashboard')
+
+    if not booking_request.can_leave_review:
+        messages.error(request, 'Отзыв доступен только после изменения статуса заявки.')
+        return redirect('dashboard')
+
+    form = ReviewForm(request.POST)
+    if form.is_valid():
+        review = form.save(commit=False)
+        review.user = request.user
+        review.booking_request = booking_request
+        try:
+            review.full_clean()
+            review.save()
+            messages.success(request, 'Спасибо, отзыв сохранён.')
+        except ValidationError as error:
+            messages.error(request, '; '.join(error.messages))
+    else:
+        messages.error(request, 'Проверьте форму отзыва.')
+
+    return redirect('dashboard')
+
+def admin_requests(request):
+    denied_response = check_admin_access(request)
+    if denied_response:
+        return denied_response
+
+    booking_requests = BookingRequest.objects.select_related('user', 'venue').prefetch_related('review')
+
+    search_query = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '').strip()
+    payment = request.GET.get('payment', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    ordering = request.GET.get('ordering', '-created_at').strip()
+
+    if search_query:
+        booking_requests = booking_requests.filter(
+            Q(conference_title__icontains=search_query)
+            | Q(user__full_name__icontains=search_query)
+            | Q(user__username__icontains=search_query)
+            | Q(venue__name__icontains=search_query)
+        )
+
+    if status:
+        booking_requests = booking_requests.filter(status=status)
+
+    if payment:
+        booking_requests = booking_requests.filter(payment_method=payment)
+
+    if date_from:
+        booking_requests = booking_requests.filter(event_date__gte=date_from)
+
+    if date_to:
+        booking_requests = booking_requests.filter(event_date__lte=date_to)
+
+    if ordering not in {'created_at', '-created_at', 'event_date', '-event_date', 'status'}:
+        ordering = '-created_at'
+
+    booking_requests = booking_requests.order_by(ordering)
+
+    status_summary = {
+        'new': booking_requests.filter(status=BookingRequest.Status.NEW).count(),
+        'scheduled': booking_requests.filter(status=BookingRequest.Status.SCHEDULED).count(),
+        'completed': booking_requests.filter(status=BookingRequest.Status.COMPLETED).count(),
+    }
+
+    paginator = Paginator(booking_requests, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'booking_requests': page_obj.object_list,
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+        'status_choices': BookingRequest.Status.choices,
+        'payment_choices': BookingRequest.PaymentMethod.choices,
+        'status_summary': status_summary,
+        'current_filters': {
+            'q': search_query,
+            'status': status,
+            'payment': payment,
+            'date_from': date_from,
+            'date_to': date_to,
+            'ordering': ordering,
+        },
+    }
+
+    return render(request, 'conference/admin_requests.html', context)
+
+
+def admin_request_detail(request, pk):
+    denied_response = check_admin_access(request)
+    if denied_response:
+        return denied_response
+
+    booking_request = get_object_or_404(
+        BookingRequest.objects.select_related('user', 'venue').prefetch_related('review'),
+        pk=pk,
+    )
+
+    if request.method == 'POST':
+        form = AdminBookingUpdateForm(request.POST, instance=booking_request)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Статус заявки обновлён.')
+            return redirect('admin_requests')
+    else:
+        form = AdminBookingUpdateForm(instance=booking_request)
+
+    context = {
+        'form': form,
+        'object': booking_request,
+    }
+    return render(request, 'conference/admin_request_detail.html', context)
 

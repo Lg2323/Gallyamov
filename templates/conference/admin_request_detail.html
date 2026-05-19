@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Заявка #{{ object.pk }} | Админка{% endblock %}
+
+{% block content %}
+<section class="section-space">
+    <div class="container">
+        <div class="card glass-card border-0 shadow-sm mb-4" data-reveal>
+            <div class="card-body p-4 p-lg-5 d-flex flex-column flex-lg-row justify-content-between gap-3">
+                <div>
+                    <div class="eyebrow">Карточка заявки</div>
+                    <h1 class="section-title mb-2">{{ object.conference_title }}</h1>
+                    <p class="mb-0 text-muted-soft">{{ object.user.full_name }} • {{ object.user.phone }} • {{ object.user.email }}</p>
+                </div>
+                <div>
+                    <span class="{{ object.status_badge_class }}">{{ object.get_status_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card glass-card border-0 shadow-sm h-100" data-reveal>
+                    <div class="card-body p-4">
+                        <h2 class="h4 mb-4">Информация о заявке</h2>
+                        <div class="row g-3">
+                            <div class="col-sm-6"><div class="note-box h-100"><strong>Помещение</strong><p class="mb-0 mt-2">{{ object.venue.name }}</p></div></div>
+                            <div class="col-sm-6"><div class="note-box h-100"><strong>Локация</strong><p class="mb-0 mt-2">{{ object.venue.location }}</p></div></div>
+                            <div class="col-sm-6"><div class="note-box h-100"><strong>Дата</strong><p class="mb-0 mt-2">{{ object.event_date|date:'d.m.Y' }}</p></div></div>
+                            <div class="col-sm-6"><div class="note-box h-100"><strong>Время</strong><p class="mb-0 mt-2">{{ object.preferred_time|time:'H:i' }}</p></div></div>
+                            <div class="col-sm-6"><div class="note-box h-100"><strong>Участники</strong><p class="mb-0 mt-2">{{ object.attendees }}</p></div></div>
+                            <div class="col-sm-6"><div class="note-box h-100"><strong>Оплата</strong><p class="mb-0 mt-2">{{ object.get_payment_method_display }}</p></div></div>
+                        </div>
+
+                        {% if object.special_requests %}
+                            <div class="note-box mt-4">
+                                <strong>Комментарий пользователя</strong>
+                                <p class="mb-0 mt-2">{{ object.special_requests }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card glass-card border-0 shadow-sm h-100" data-reveal>
+                    <div class="card-body p-4">
+                        <h2 class="h4 mb-4">Изменить статус</h2>
+
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            {% for field in form %}
+                                <div class="mb-3 {% if field.errors %}has-error{% endif %}">
+                                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                    {{ field }}
+                                        <div class="form-text">{{ field.help_text }}</div>
+                                    {% for error in field.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-brand">Сохранить статус</button>
+                                <a href="{% url 'admin_requests' %}" class="btn btn-outline-secondary">Назад к списку</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if object.review %}
+            <div class="card glass-card border-0 shadow-sm mt-4" data-reveal>
+                <div class="card-body p-4">
+                    <h2 class="h4 mb-3">Отзыв пользователя</h2>
+                    <div class="note-box note-box--warm">
+                        <strong>{{ object.review.user.full_name }} • {{ object.review.rating }}/5</strong>
+                        <p class="mb-0 mt-2">{{ object.review.comment }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -35,7 +35,6 @@ class RegistrationForm(forms.ModelForm):
                 'autocomplete': 'new-password',
             }
         ),
-        help_text='Минимум 8 символов.',
     )
 
     class Meta:
@@ -46,12 +45,6 @@ class RegistrationForm(forms.ModelForm):
             'full_name': 'ФИО',
             'phone': 'Телефон',
             'email': 'Электронная почта',
-        }
-        help_texts = {
-            'username': 'Минимум 6 символов, только латиница и цифры.',
-            'full_name': 'Укажите фамилию, имя и отчество.',
-            'phone': 'Например: +79991234567',
-            'email': 'На этот адрес можно отправлять уведомления.',
         }
         widgets = {
             'username': forms.TextInput(attrs={'placeholder': 'conference24'}),

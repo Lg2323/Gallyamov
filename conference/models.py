@@ -4,11 +4,12 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
+# Валидация логина
 login_validator = RegexValidator(
     regex=r'^[A-Za-z0-9]+$',
     message='Логин может содержать только латинские буквы и цифры.',
 )
-
+# Валидация номера телефона
 phone_validator = RegexValidator(
     regex=r'^\+?\d{10,15}$',
     message='Введите телефон в формате +79991234567 или 89991234567.',
@@ -21,8 +22,7 @@ class User(AbstractUser):
     email = models.EmailField('Электронная почта', unique=True)
     full_name = models.CharField('ФИО', max_length=255)
     phone = models.CharField('Телефон', max_length=16, validators=[phone_validator])
-    username = models.CharField('Логин', max_length=150, unique=True, validators=[login_validator],
-                                help_text='Минимум 6 символов, только латиница и цифры.')
+    username = models.CharField('Логин', max_length=150, unique=True, validators=[login_validator],)
     REQUIRED_FIELDS = ['email', 'full_name', 'phone']
 
     class Meta:
@@ -58,9 +58,9 @@ class Venue(models.Model):
 
 class BookingRequest(models.Model):
     class PaymentMethod(models.TextChoices):
-        CARD = 'card', 'Банковская карта'
-        CASH = 'cash', 'Наличные'
-        INVOICE = 'invoice', 'Безналичный расчёт'
+        CARD = 'card', 'Предоплата по QR-коду'
+        CASH = 'cash', 'Постоплата в офисе организации'
+        INVOICE = 'invoice', 'Оплата картой МИР'
     class Status(models.TextChoices):
         NEW = 'new', 'Новая'
         SCHEDULED = 'scheduled', 'Мероприятие назначено'
